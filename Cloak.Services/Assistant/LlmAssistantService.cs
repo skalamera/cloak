@@ -32,12 +32,12 @@ namespace Cloak.Services.Assistant
             if (_charsSinceLast < 120) return;
             if (DateTime.UtcNow - _lastSuggestionAt < _minInterval) return;
             _charsSinceLast = 0;
-            var snapshot = _buffer.Length > 2000 ? _buffer[^2000..] : _buffer;
+            var snapshot = _buffer.Length > 3000 ? _buffer[^3000..] : _buffer;
             var context = snapshot;
             if (_profileService != null)
             {
                 var profile = await _profileService.GetProfileContextAsync();
-                context = $"Profile Context (use this as ground truth for answers):\n{profile}\n\nConversation Snippet:\n{snapshot}";
+                context = $"Profile Context (ground truth):\n{profile}\n\nConversation Snippet (latest turns):\n{snapshot}";
             }
             var suggestion = (await _llmClient.GetSuggestionAsync(context)).Trim();
             if (string.IsNullOrWhiteSpace(suggestion)) return;
@@ -49,12 +49,12 @@ namespace Cloak.Services.Assistant
 
         public async void ForceSuggest()
         {
-            var snapshot = _buffer.Length > 2000 ? _buffer[^2000..] : _buffer;
+            var snapshot = _buffer.Length > 3000 ? _buffer[^3000..] : _buffer;
             var context = snapshot;
             if (_profileService != null)
             {
                 var profile = await _profileService.GetProfileContextAsync();
-                context = $"Profile Context (use this as ground truth for answers):\n{profile}\n\nConversation Snippet:\n{snapshot}";
+                context = $"Profile Context (ground truth):\n{profile}\n\nConversation Snippet (latest turns):\n{snapshot}";
             }
             var suggestion = (await _llmClient.GetSuggestionAsync(context)).Trim();
             if (string.IsNullOrWhiteSpace(suggestion)) return;

@@ -24,7 +24,15 @@ namespace Cloak.Services.LLM
             {
                 contents = new[]
                 {
-                    new { parts = new[] { new { text = $"Given this live meeting snippet, propose one concise suggestion or answer.\nContext: {context}\nResponse:" } } }
+                    new { parts = new[] { new { text =
+                        $"You are assisting me live in a job interview.\n" +
+                        "Write the exact first-person answer I should speak next, as the candidate (use I/me). " +
+                        "Base the answer on my Profile Context and the most recent question in the Conversation Snippet. " +
+                        "Make it well‑structured, specific, and complete (4–7 sentences). " +
+                        "Directly reference my experience, projects, metrics, and tools from the Profile Context. " +
+                        "Prefer quantified impact and concrete examples. " +
+                        "ABSOLUTELY DO NOT give advice, meta commentary, coaching, or bullets like 'focus on...'; output ONLY the actual answer to speak, no quotes or prefixes.\n\n" +
+                        $"{context}\n\nAnswer:" } } }
                 }
             };
             using var resp = await _http.PostAsJsonAsync(url, payload);

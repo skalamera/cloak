@@ -3,6 +3,7 @@ using Cloak.Services.Audio;
 using Cloak.Services.Transcription;
 using Cloak.Services.Assistant;
 using System.Windows.Input;
+using System.Linq;
 
 namespace Cloak.App
 {
@@ -10,7 +11,9 @@ namespace Cloak.App
     {
         private IAudioCaptureService _audioCaptureService;
         private readonly ITranscriptionService _transcriptionService;
+        private ITranscriptionService? _micTranscriptionService;
         private readonly IAssistantService _assistantService;
+        private readonly System.Collections.Generic.List<IAudioCaptureService> _activeCaptures = new();
 
         public MainWindow()
         {
@@ -59,15 +62,54 @@ namespace Cloak.App
             StartButton.IsEnabled = false;
             StopButton.IsEnabled = true;
 
-            // Select capture source
+            // Select capture sources
             var mode = (CaptureMode.SelectedItem as System.Windows.Controls.ComboBoxItem)?.Content?.ToString();
-            if (mode == "System") _audioCaptureService = new WasapiLoopbackCaptureService();
-            else if (mode == "Both") _audioCaptureService = new DualAudioCaptureService(new WasapiAudioCaptureService(), new WasapiLoopbackCaptureService());
-
-            await _audioCaptureService.StartAsync(sample =>
+            _activeCaptures.Clear();
+            if (mode == "System")
             {
-                _transcriptionService.PushAudio(sample);
-            });
+                _activeCaptures.Add(new WasapiLoopbackCaptureService());
+                _micTranscriptionService = null; // suggestions disabled in System-only
+            }
+            else if (mode == "Both")
+            {
+                _activeCaptures.Add(new WasapiAudioCaptureService());
+                _activeCaptures.Add(new WasapiLoopbackCaptureService());
+
+                // Separate mic-only transcriber for suggestions
+                var azureKey2 = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY");
+                var azureRegion2 = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_REGION");
+                _micTranscriptionService = !string.IsNullOrWhiteSpace(azureKey2) && !string.IsNullOrWhiteSpace(azureRegion2)
+                    ? new AzureSpeechTranscriptionService(azureKey2!, azureRegion2!)
+                    : new PlaceholderTranscriptionService();
+                _micTranscriptionService.TranscriptReceived += OnMicTranscriptReceived;
+            }
+            else // Microphone
+            {
+                _activeCaptures.Add(new WasapiAudioCaptureService());
+                // Reuse display transcriber for suggestions
+                _micTranscriptionService = _transcriptionService;
+                _micTranscriptionService.TranscriptReceived += OnMicTranscriptReceived;
+            }
+
+            foreach (var cap in _activeCaptures)
+            {
+                if (cap is WasapiAudioCaptureService)
+                {
+                    await cap.StartAsync(sample =>
+                    {
+                        _transcriptionService.PushAudio(sample); // show in UI
+                        if (!object.ReferenceEquals(_micTranscriptionService, _transcriptionService) && _micTranscriptionService != null)
+                            _micTranscriptionService.PushAudio(sample); // suggestions
+                    });
+                }
+                else // loopback
+                {
+                    await cap.StartAsync(sample =>
+                    {
+                        _transcriptionService.PushAudio(sample); // UI only
+                    });
+                }
+            }
         }
 
         private async void OnStopClick(object sender, RoutedEventArgs e)
@@ -75,21 +117,36 @@ namespace Cloak.App
             StopButton.IsEnabled = false;
             StartButton.IsEnabled = true;
 
-            await _audioCaptureService.StopAsync();
+            foreach (var cap in _activeCaptures)
+                await cap.StopAsync();
             _transcriptionService.Flush();
+            if (_micTranscriptionService != null && !object.ReferenceEquals(_micTranscriptionService, _transcriptionService))
+                _micTranscriptionService.Flush();
 
             // Auto-summary using LLM (Gemini if configured)
             var geminiKey = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? "AIzaSyBwsUUYP4X25zDH_2qjGUXh89VgAFFfKlU";
             var llm = new Cloak.Services.LLM.GeminiLlmClient(geminiKey);
-            var transcript = string.Join("\n", TranscriptItems.Items);
-            if (!string.IsNullOrWhiteSpace(transcript))
+            var transcript = string.Join("\n", TranscriptItems.Items.Cast<object>().Select(o => o?.ToString() ?? string.Empty));
+            if (!string.IsNullOrWhiteSpace(transcript) && transcript.Length > 120)
             {
-                var summary = await llm.SummarizeAsync(transcript);
-                if (!string.IsNullOrWhiteSpace(summary))
+                TranscriptItems.Items.Add("--- Session Summary (generating)... ---");
+                try
                 {
+                    var summary = await llm.SummarizeAsync(transcript);
                     TranscriptItems.Items.Add("--- Session Summary ---");
-                    foreach (var line in summary.Split(new[] {"\r\n", "\n"}, System.StringSplitOptions.None))
-                        TranscriptItems.Items.Add(line);
+                    if (!string.IsNullOrWhiteSpace(summary))
+                    {
+                        foreach (var line in summary.Split(new[] {"\r\n", "\n"}, System.StringSplitOptions.None))
+                            TranscriptItems.Items.Add(line);
+                    }
+                    else
+                    {
+                        TranscriptItems.Items.Add("(No summary returned)");
+                    }
+                }
+                catch (System.Exception ex)
+                {
+                    TranscriptItems.Items.Add($"(Summary error: {ex.Message})");
                 }
             }
         }
@@ -99,8 +156,12 @@ namespace Cloak.App
             Dispatcher.Invoke(() =>
             {
                 TranscriptItems.Items.Add(text);
-                _assistantService.ProcessContext(text);
             });
+        }
+
+        private void OnMicTranscriptReceived(object? sender, string text)
+        {
+            _assistantService.ProcessContext(text);
         }
 
         private void OnSuggestionReceived(object? sender, string suggestion)
