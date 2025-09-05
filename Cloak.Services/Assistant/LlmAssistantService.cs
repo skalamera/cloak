@@ -13,6 +13,7 @@ namespace Cloak.Services.Assistant
         private readonly IProfileService? _profileService;
 
         private string _buffer = string.Empty;
+        private string _lastQuestionSnippet = string.Empty;
         private int _charsSinceLast = 0;
         private DateTime _lastSuggestionAt = DateTime.MinValue;
         private string _lastSuggestion = string.Empty;
@@ -39,6 +40,7 @@ namespace Cloak.Services.Assistant
                 var profile = await _profileService.GetProfileContextAsync();
                 context = $"Profile Context (ground truth):\n{profile}\n\nConversation Snippet (latest turns):\n{snapshot}";
             }
+            _lastQuestionSnippet = snapshot; // cache used for SuggestNow
             var suggestion = (await _llmClient.GetSuggestionAsync(context)).Trim();
             if (string.IsNullOrWhiteSpace(suggestion)) return;
             if (string.Equals(suggestion, _lastSuggestion, StringComparison.OrdinalIgnoreCase)) return;
@@ -47,9 +49,9 @@ namespace Cloak.Services.Assistant
             SuggestionReceived?.Invoke(this, suggestion);
         }
 
-        public async void ForceSuggest()
+        public async void ForceSuggest(string? overrideContext = null)
         {
-            var snapshot = _buffer.Length > 3000 ? _buffer[^3000..] : _buffer;
+            var snapshot = !string.IsNullOrWhiteSpace(overrideContext) ? overrideContext! : (_lastQuestionSnippet.Length > 0 ? _lastQuestionSnippet : (_buffer.Length > 3000 ? _buffer[^3000..] : _buffer));
             var context = snapshot;
             if (_profileService != null)
             {

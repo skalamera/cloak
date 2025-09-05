@@ -12,8 +12,12 @@ namespace Cloak.App
         private IAudioCaptureService _audioCaptureService;
         private readonly ITranscriptionService _transcriptionService;
         private ITranscriptionService? _micTranscriptionService;
+        private ITranscriptionService? _loopTranscriptionService;
         private readonly IAssistantService _assistantService;
         private readonly System.Collections.Generic.List<IAudioCaptureService> _activeCaptures = new();
+        private string _loopQuestionCache = string.Empty;
+        private System.DateTime _lastLoopSuggestAt = System.DateTime.MinValue;
+        private readonly System.TimeSpan _loopSuggestMinInterval = System.TimeSpan.FromSeconds(6);
 
         public MainWindow()
         {
@@ -69,6 +73,12 @@ namespace Cloak.App
             {
                 _activeCaptures.Add(new WasapiLoopbackCaptureService());
                 _micTranscriptionService = null; // suggestions disabled in System-only
+                var azureKeyL = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY");
+                var azureRegionL = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_REGION");
+                _loopTranscriptionService = !string.IsNullOrWhiteSpace(azureKeyL) && !string.IsNullOrWhiteSpace(azureRegionL)
+                    ? new AzureSpeechTranscriptionService(azureKeyL!, azureRegionL!)
+                    : new PlaceholderTranscriptionService();
+                _loopTranscriptionService.TranscriptReceived += OnLoopTranscriptReceived;
             }
             else if (mode == "Both")
             {
@@ -82,6 +92,13 @@ namespace Cloak.App
                     ? new AzureSpeechTranscriptionService(azureKey2!, azureRegion2!)
                     : new PlaceholderTranscriptionService();
                 _micTranscriptionService.TranscriptReceived += OnMicTranscriptReceived;
+
+                var azureKeyL = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY");
+                var azureRegionL = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_REGION");
+                _loopTranscriptionService = !string.IsNullOrWhiteSpace(azureKeyL) && !string.IsNullOrWhiteSpace(azureRegionL)
+                    ? new AzureSpeechTranscriptionService(azureKeyL!, azureRegionL!)
+                    : new PlaceholderTranscriptionService();
+                _loopTranscriptionService.TranscriptReceived += OnLoopTranscriptReceived;
             }
             else // Microphone
             {
@@ -89,6 +106,7 @@ namespace Cloak.App
                 // Reuse display transcriber for suggestions
                 _micTranscriptionService = _transcriptionService;
                 _micTranscriptionService.TranscriptReceived += OnMicTranscriptReceived;
+                _loopTranscriptionService = null;
             }
 
             foreach (var cap in _activeCaptures)
@@ -107,6 +125,7 @@ namespace Cloak.App
                     await cap.StartAsync(sample =>
                     {
                         _transcriptionService.PushAudio(sample); // UI only
+                        if (_loopTranscriptionService != null) _loopTranscriptionService.PushAudio(sample); // question detect
                     });
                 }
             }
@@ -122,6 +141,8 @@ namespace Cloak.App
             _transcriptionService.Flush();
             if (_micTranscriptionService != null && !object.ReferenceEquals(_micTranscriptionService, _transcriptionService))
                 _micTranscriptionService.Flush();
+            if (_loopTranscriptionService != null && !object.ReferenceEquals(_loopTranscriptionService, _transcriptionService))
+                _loopTranscriptionService.Flush();
 
             // Auto-summary using LLM (Gemini if configured)
             var geminiKey = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? "AIzaSyBwsUUYP4X25zDH_2qjGUXh89VgAFFfKlU";
@@ -164,6 +185,27 @@ namespace Cloak.App
             _assistantService.ProcessContext(text);
         }
 
+        private void OnLoopTranscriptReceived(object? sender, string text)
+        {
+            // Heuristic: trigger on questions, throttle to avoid spam
+            if (string.IsNullOrWhiteSpace(text)) return;
+            _loopQuestionCache += text + "\n";
+            bool looksLikeQuestion = text.Contains("?") || text.EndsWith("?", System.StringComparison.OrdinalIgnoreCase) ||
+                                      text.IndexOf("can you", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                      text.IndexOf("tell me", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                      text.IndexOf("how do", System.StringComparison.OrdinalIgnoreCase) >= 0;
+            if (!looksLikeQuestion) return;
+            if (System.DateTime.UtcNow - _lastLoopSuggestAt < _loopSuggestMinInterval) return;
+            _lastLoopSuggestAt = System.DateTime.UtcNow;
+
+            // Build short recent context from loopback cache and UI transcript tail
+            var tail = System.Linq.Enumerable.Reverse(TranscriptItems.Items.Cast<object>()).Take(10).Select(o => o?.ToString() ?? string.Empty);
+            var ctx = string.Join("\n", tail);
+            if (string.IsNullOrWhiteSpace(ctx)) ctx = _loopQuestionCache;
+            _assistantService.ForceSuggest(ctx);
+            _loopQuestionCache = string.Empty;
+        }
+
         private void OnSuggestionReceived(object? sender, string suggestion)
         {
             Dispatcher.Invoke(() =>
@@ -174,7 +216,12 @@ namespace Cloak.App
 
         private void OnSuggestNowClick(object sender, RoutedEventArgs e)
         {
-            _assistantService.ForceSuggest();
+            // Use most recent UI transcript lines (which include interviewer) for the question context
+            var lastLines = System.Linq.Enumerable.Reverse(TranscriptItems.Items.Cast<object>())
+                .Take(12)
+                .Select(o => o?.ToString() ?? string.Empty);
+            var overrideContext = string.Join("\n", lastLines);
+            _assistantService.ForceSuggest(overrideContext);
         }
 
         private void OnCopySuggestionClick(object sender, RoutedEventArgs e)

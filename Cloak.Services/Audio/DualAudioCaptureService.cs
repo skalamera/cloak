@@ -30,7 +30,7 @@ namespace Cloak.Services.Audio
             _cts = new CancellationTokenSource();
             _mixerTask = Task.Run(async () =>
             {
-                const int frame = 320;
+                const int frame = 160; // 10ms frames @16kHz for smoother mixing
                 var mixBuffer = new float[frame];
                 var micBuffer = new float[frame];
                 var loopBuffer = new float[frame];
@@ -48,7 +48,7 @@ namespace Cloak.Services.Audio
                     }
 
                     // Duck loopback when mic present
-                    float attenuation = micCount > 0 ? 0.35f : 1f;
+                    float attenuation = micCount > 0 ? 0.7f : 1f; // less aggressive ducking
                     for (int i = 0; i < count; i++)
                     {
                         float m = i < micCount ? micBuffer[i] : 0f;

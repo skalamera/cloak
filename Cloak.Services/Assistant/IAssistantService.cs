@@ -6,7 +6,7 @@ namespace Cloak.Services.Assistant
     {
         event EventHandler<string>? SuggestionReceived;
         void ProcessContext(string text);
-        void ForceSuggest();
+        void ForceSuggest(string? overrideContext = null);
     }
 }
 
