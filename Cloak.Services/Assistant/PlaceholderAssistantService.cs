@@ -13,7 +13,7 @@ namespace Cloak.Services.Assistant
             SuggestionReceived?.Invoke(this, suggestion);
         }
 
-        public void ForceSuggest()
+        public void ForceSuggest(string? overrideContext = null)
         {
             SuggestionReceived?.Invoke(this, "[mock] Suggest now");
         }
