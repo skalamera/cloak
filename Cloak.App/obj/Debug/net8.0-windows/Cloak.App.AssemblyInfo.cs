@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cloak.App")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+a8455e0eae8294411ca8ecfd65f4047dc83ac3a4")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+49a4da91c5dedca2294bdae09474f2a3188a335f")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cloak.App")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cloak.App")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

@@ -72,13 +72,8 @@ namespace Cloak.App
             if (mode == "System")
             {
                 _activeCaptures.Add(new WasapiLoopbackCaptureService());
-                _micTranscriptionService = null; // suggestions disabled in System-only
-                var azureKeyL = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY");
-                var azureRegionL = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_REGION");
-                _loopTranscriptionService = !string.IsNullOrWhiteSpace(azureKeyL) && !string.IsNullOrWhiteSpace(azureRegionL)
-                    ? new AzureSpeechTranscriptionService(azureKeyL!, azureRegionL!)
-                    : new PlaceholderTranscriptionService();
-                _loopTranscriptionService.TranscriptReceived += OnLoopTranscriptReceived;
+                _micTranscriptionService = null; // avoid concurrent Azure sessions
+                _loopTranscriptionService = null; // rely on UI transcript for question detection
             }
             else if (mode == "Both")
             {
@@ -86,19 +81,9 @@ namespace Cloak.App
                 _activeCaptures.Add(new WasapiLoopbackCaptureService());
 
                 // Separate mic-only transcriber for suggestions
-                var azureKey2 = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY");
-                var azureRegion2 = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_REGION");
-                _micTranscriptionService = !string.IsNullOrWhiteSpace(azureKey2) && !string.IsNullOrWhiteSpace(azureRegion2)
-                    ? new AzureSpeechTranscriptionService(azureKey2!, azureRegion2!)
-                    : new PlaceholderTranscriptionService();
-                _micTranscriptionService.TranscriptReceived += OnMicTranscriptReceived;
-
-                var azureKeyL = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY");
-                var azureRegionL = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_REGION");
-                _loopTranscriptionService = !string.IsNullOrWhiteSpace(azureKeyL) && !string.IsNullOrWhiteSpace(azureRegionL)
-                    ? new AzureSpeechTranscriptionService(azureKeyL!, azureRegionL!)
-                    : new PlaceholderTranscriptionService();
-                _loopTranscriptionService.TranscriptReceived += OnLoopTranscriptReceived;
+                // Avoid creating additional Azure recognizers (F0 tier allows limited concurrency)
+                _micTranscriptionService = null;
+                _loopTranscriptionService = null;
             }
             else // Microphone
             {
@@ -125,7 +110,7 @@ namespace Cloak.App
                     await cap.StartAsync(sample =>
                     {
                         _transcriptionService.PushAudio(sample); // UI only
-                        if (_loopTranscriptionService != null) _loopTranscriptionService.PushAudio(sample); // question detect
+                        // no separate loopback transcriber to avoid Azure concurrency limits
                     });
                 }
             }
@@ -178,6 +163,22 @@ namespace Cloak.App
             {
                 TranscriptItems.Items.Add(text);
             });
+
+            // Heuristic question detection from combined UI transcript (works with single Azure recognizer)
+            bool looksLikeQuestion = text.Contains("?") || text.EndsWith("?", System.StringComparison.OrdinalIgnoreCase) ||
+                                      text.IndexOf("can you", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                      text.IndexOf("tell me", System.StringComparison.OrdinalIgnoreCase) >= 0 ||
+                                      text.IndexOf("how do", System.StringComparison.OrdinalIgnoreCase) >= 0;
+            if (looksLikeQuestion)
+            {
+                if (System.DateTime.UtcNow - _lastLoopSuggestAt >= _loopSuggestMinInterval)
+                {
+                    _lastLoopSuggestAt = System.DateTime.UtcNow;
+                    var tail = System.Linq.Enumerable.Reverse(TranscriptItems.Items.Cast<object>()).Take(12).Select(o => o?.ToString() ?? string.Empty);
+                    var ctx = string.Join("\n", tail);
+                    _assistantService.ForceSuggest(ctx);
+                }
+            }
         }
 
         private void OnMicTranscriptReceived(object? sender, string text)
