@@ -1,0 +1,12 @@
+C:\Users\skala\Projects\cloak\Cloak.Services\bin\Debug\net8.0\Cloak.Services.deps.json
+C:\Users\skala\Projects\cloak\Cloak.Services\bin\Debug\net8.0\Cloak.Services.dll
+C:\Users\skala\Projects\cloak\Cloak.Services\bin\Debug\net8.0\Cloak.Services.pdb
+C:\Users\skala\Projects\cloak\Cloak.Services\obj\Debug\net8.0\Cloak.Services.csproj.AssemblyReference.cache
+C:\Users\skala\Projects\cloak\Cloak.Services\obj\Debug\net8.0\Cloak.Services.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\skala\Projects\cloak\Cloak.Services\obj\Debug\net8.0\Cloak.Services.AssemblyInfoInputs.cache
+C:\Users\skala\Projects\cloak\Cloak.Services\obj\Debug\net8.0\Cloak.Services.AssemblyInfo.cs
+C:\Users\skala\Projects\cloak\Cloak.Services\obj\Debug\net8.0\Cloak.Services.csproj.CoreCompileInputs.cache
+C:\Users\skala\Projects\cloak\Cloak.Services\obj\Debug\net8.0\Cloak.Services.dll
+C:\Users\skala\Projects\cloak\Cloak.Services\obj\Debug\net8.0\refint\Cloak.Services.dll
+C:\Users\skala\Projects\cloak\Cloak.Services\obj\Debug\net8.0\Cloak.Services.pdb
+C:\Users\skala\Projects\cloak\Cloak.Services\obj\Debug\net8.0\ref\Cloak.Services.dll

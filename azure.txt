@@ -1,0 +1,128 @@
+Key 1: 2BLSPqSjju5W4Gvi1hxNfKlCYx0cHa6PhOlnXAJAq31L6nKmSBbsJQQJ99BIACYeBjFXJ3w3AAAYACOG4s25
+Key 2: EoZIdLOieRzgXOtX5EW9LFmzt0Wm2yPMTM68M9voW825GCtmjmLqJQQJ99BIACYeBjFXJ3w3AAAYACOGPt27
+Location/Region: eastus
+Endpoint: https: //eastus.api.cognitive.microsoft.com/
+
+
+{
+    "id": "/subscriptions/ac98b95c-c482-4de5-93d3-4cd8814e4074/resourceGroups/MyResourceGroup/providers/Microsoft.CognitiveServices/accounts/cloak-speech",
+    "name": "cloak-speech",
+    "type": "Microsoft.CognitiveServices/accounts",
+    "etag": "\"15041769-0000-0100-0000-68ba73610000\"",
+    "location": "eastus",
+    "sku": {
+        "name": "F0"
+    },
+    "kind": "SpeechServices",
+    "tags": {},
+    "properties": {
+        "endpoint": "https://eastus.api.cognitive.microsoft.com/",
+        "internalId": "93134067be29441887adc1498a368d94",
+        "dateCreated": "2025-09-05T05:21:36.8228369Z",
+        "callRateLimit": {
+            "rules": [
+                {
+                    "key": "token",
+                    "renewalPeriod": 1,
+                    "count": 50,
+                    "matchPatterns": [
+                        {
+                            "path": "sts/v1.0/*",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.aoaivoicesynthesize",
+                    "renewalPeriod": 60,
+                    "count": 0,
+                    "matchPatterns": [
+                        {
+                            "path": "speech/aoaivoicesynthesize",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "speech.aoaihdvoicesynthesize",
+                    "renewalPeriod": 60,
+                    "count": 0,
+                    "matchPatterns": [
+                        {
+                            "path": "speech/aoaihdvoicesynthesize",
+                            "method": "*"
+                        }
+                    ]
+                },
+                {
+                    "key": "default",
+                    "renewalPeriod": 10,
+                    "count": 100,
+                    "matchPatterns": [
+                        {
+                            "path": "*",
+                            "method": "*"
+                        }
+                    ]
+                }
+            ]
+        },
+        "isMigrated": false,
+        "networkAcls": {
+            "defaultAction": "Allow",
+            "virtualNetworkRules": [],
+            "ipRules": []
+        },
+        "privateEndpointConnections": [],
+        "publicNetworkAccess": "Enabled",
+        "capabilities": [
+            {
+                "name": "CommitmentPlan"
+            },
+            {
+                "name": "VirtualNetworks"
+            },
+            {
+                "name": "CustomerManagedKey"
+            },
+            {
+                "name": "Container",
+                "value": "SpeechServices.CustomSpeechToText,SpeechServices.NeuralTextToSpeechOnPrem,SpeechServices.DPP,SpeechServices.SpeechToText,SpeechServices.ctsdiarizer,SpeechServices.diarization"
+            }
+        ],
+        "endpoints": {
+            "Speech Services Speech to Text": "https://eastus.api.cognitive.microsoft.com/",
+            "Speech Services Speech to Text v3.2": "https://eastus.api.cognitive.microsoft.com/",
+            "Speech Services Speech to Text 2024-05-15-preview": "https://eastus.api.cognitive.microsoft.com/",
+            "Speech Services Speech to Text 2024-11-15": "https://eastus.api.cognitive.microsoft.com/",
+            "Speech Services Speech to Text v3.2_internal.1": "https://eastus.api.cognitive.microsoft.com/",
+            "Speech Services Custom Voice": "https://eastus.api.cognitive.microsoft.com/",
+            "Speech Services Custom Voice Trial": "https://eastus.api.cognitive.microsoft.com/",
+            "Video Translation": "https://eastus.api.cognitive.microsoft.com/",
+            "Speech Services Audio Content Creation": "https://eastus.api.cognitive.microsoft.com/",
+            "Speech Services Custom Avatar": "https://eastus.api.cognitive.microsoft.com/",
+            "Speech Services Batch Avatar": "https://eastus.api.cognitive.microsoft.com/",
+            "Speech Services Batch Text to Speech": "https://eastus.api.cognitive.microsoft.com/",
+            "Speech Services Speech to Text (Standard)": "https://eastus.stt.speech.microsoft.com",
+            "Speech Services Text to Speech (Neural)": "https://eastus.tts.speech.microsoft.com",
+            "Speech Services Speaker Verification": "https://eastus.api.cognitive.microsoft.com/",
+            "Speech Services Speaker Identification": "https://eastus.api.cognitive.microsoft.com/",
+            "Voice Agent Realtime API": "https://eastus.api.cognitive.microsoft.com/",
+            "Voice Live Realtime API": "https://eastus.api.cognitive.microsoft.com/",
+            "Token": "https://eastus.api.cognitive.microsoft.com/"
+        },
+        "provisioningState": "Succeeded"
+    },
+    "identity": {
+        "type": "None"
+    },
+    "systemData": {
+        "createdBy": "skalamera@live.com",
+        "createdByType": "User",
+        "createdAt": "2025-09-05T05:21:36.6268465Z",
+        "lastModifiedBy": "skalamera@live.com",
+        "lastModifiedByType": "User",
+        "lastModifiedAt": "2025-09-05T05:21:36.6268465Z"
+    },
+    "apiVersion": "2021-04-30"
+}
