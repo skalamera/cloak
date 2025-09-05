@@ -3,7 +3,6 @@ using System.Threading.Tasks;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.CognitiveServices.Speech.Audio;
 using Microsoft.CognitiveServices.Speech.Translation;
-using Microsoft.CognitiveServices.Speech.Grammar;
 
 namespace Cloak.Services.Transcription
 {
