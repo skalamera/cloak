@@ -17,8 +17,26 @@ namespace Cloak.Services.Audio
 
         public async Task StartAsync(Action<ReadOnlyMemory<float>> onSamples)
         {
-            void OnMic(ReadOnlyMemory<float> s) => onSamples(s);
-            void OnLoop(ReadOnlyMemory<float> s) => onSamples(s);
+            // Simple ducking: reduce loopback amplitude when mic energy is high
+            float attenuation = 0.35f;
+            float micRms = 0f;
+
+            void OnMic(ReadOnlyMemory<float> s)
+            {
+                micRms = ComputeRms(s.Span);
+                onSamples(s);
+            }
+
+            void OnLoop(ReadOnlyMemory<float> s)
+            {
+                if (micRms > 0.02f)
+                {
+                    var buf = s.ToArray();
+                    for (int i = 0; i < buf.Length; i++) buf[i] *= attenuation;
+                    onSamples(buf);
+                }
+                else onSamples(s);
+            }
 
             await _mic.StartAsync(OnMic);
             await _loopback.StartAsync(OnLoop);
@@ -28,6 +46,13 @@ namespace Cloak.Services.Audio
         {
             await _mic.StopAsync();
             await _loopback.StopAsync();
+        }
+
+        private static float ComputeRms(ReadOnlySpan<float> samples)
+        {
+            double sum = 0;
+            for (int i = 0; i < samples.Length; i++) sum += samples[i] * samples[i];
+            return (float)Math.Sqrt(sum / Math.Max(1, samples.Length));
         }
     }
 }

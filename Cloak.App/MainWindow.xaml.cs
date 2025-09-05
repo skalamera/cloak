@@ -78,7 +78,20 @@ namespace Cloak.App
             await _audioCaptureService.StopAsync();
             _transcriptionService.Flush();
 
-            // TODO: auto-summary could be added here using LLM
+            // Auto-summary using LLM (Gemini if configured)
+            var geminiKey = System.Environment.GetEnvironmentVariable("GEMINI_API_KEY") ?? "AIzaSyBwsUUYP4X25zDH_2qjGUXh89VgAFFfKlU";
+            var llm = new Cloak.Services.LLM.GeminiLlmClient(geminiKey);
+            var transcript = string.Join("\n", TranscriptItems.Items);
+            if (!string.IsNullOrWhiteSpace(transcript))
+            {
+                var summary = await llm.SummarizeAsync(transcript);
+                if (!string.IsNullOrWhiteSpace(summary))
+                {
+                    TranscriptItems.Items.Add("--- Session Summary ---");
+                    foreach (var line in summary.Split(new[] {"\r\n", "\n"}, System.StringSplitOptions.None))
+                        TranscriptItems.Items.Add(line);
+                }
+            }
         }
 
         private void OnTranscriptReceived(object? sender, string text)

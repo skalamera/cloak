@@ -40,6 +40,30 @@ namespace Cloak.Services.LLM
             }
             return string.Empty;
         }
+
+        public async Task<string> SummarizeAsync(string transcript)
+        {
+            var url = $"https://generativelanguage.googleapis.com/v1beta/models/{_modelName}:generateContent?key={_apiKey}";
+            var payload = new
+            {
+                contents = new[]
+                {
+                    new { parts = new[] { new { text = $"Summarize this interview conversation into:\n- 3-5 bullet highlights\n- 3 action items\n- Risks/objections to prepare for\n\nTranscript:\n{transcript}" } } }
+                }
+            };
+            using var resp = await _http.PostAsJsonAsync(url, payload);
+            resp.EnsureSuccessStatusCode();
+            using var doc = JsonDocument.Parse(await resp.Content.ReadAsStringAsync());
+            var root = doc.RootElement;
+            if (root.TryGetProperty("candidates", out var candidates) && candidates.GetArrayLength() > 0)
+            {
+                var content = candidates[0].GetProperty("content");
+                var parts = content.GetProperty("parts");
+                if (parts.GetArrayLength() > 0 && parts[0].TryGetProperty("text", out var text))
+                    return text.GetString() ?? string.Empty;
+            }
+            return string.Empty;
+        }
     }
 }
 
