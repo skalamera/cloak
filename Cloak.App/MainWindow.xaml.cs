@@ -18,6 +18,10 @@ namespace Cloak.App
         private string _loopQuestionCache = string.Empty;
         private System.DateTime _lastLoopSuggestAt = System.DateTime.MinValue;
         private readonly System.TimeSpan _loopSuggestMinInterval = System.TimeSpan.FromSeconds(6);
+        private float _lastMicRms = 0f;
+        private float _lastLoopRms = 0f;
+        private const float RmsThreshold = 0.01f; // gate low noise
+        private const float DominanceRatio = 1.2f; // active speaker detection
 
         public MainWindow()
         {
@@ -101,8 +105,15 @@ namespace Cloak.App
                     await cap.StartAsync(sample =>
                     {
                         _transcriptionService.PushAudio(sample); // show in UI
-                        if (!object.ReferenceEquals(_micTranscriptionService, _transcriptionService) && _micTranscriptionService != null)
-                            _micTranscriptionService.PushAudio(sample); // suggestions
+                        // Active speaker gating: prefer mic when dominant
+                        _lastMicRms = ComputeRms(sample.Span);
+                        if (_lastMicRms > RmsThreshold && _lastMicRms >= _lastLoopRms * DominanceRatio)
+                        {
+                            if (!object.ReferenceEquals(_micTranscriptionService, _transcriptionService) && _micTranscriptionService != null)
+                                _micTranscriptionService.PushAudio(sample); // suggestions
+                            else
+                                _transcriptionService.PushAudio(sample); // single recognizer path
+                        }
                     });
                 }
                 else // loopback
@@ -110,7 +121,12 @@ namespace Cloak.App
                     await cap.StartAsync(sample =>
                     {
                         _transcriptionService.PushAudio(sample); // UI only
-                        // no separate loopback transcriber to avoid Azure concurrency limits
+                        _lastLoopRms = ComputeRms(sample.Span);
+                        if (_lastLoopRms > RmsThreshold && _lastLoopRms >= _lastMicRms * DominanceRatio)
+                        {
+                            // feed recognizer when interviewer dominates
+                            _transcriptionService.PushAudio(sample);
+                        }
                     });
                 }
             }
@@ -155,6 +171,17 @@ namespace Cloak.App
                     TranscriptItems.Items.Add($"(Summary error: {ex.Message})");
                 }
             }
+        }
+
+        private static float ComputeRms(ReadOnlySpan<float> samples)
+        {
+            double sum = 0;
+            for (int i = 0; i < samples.Length; i++)
+            {
+                var v = samples[i];
+                sum += v * v;
+            }
+            return (float)System.Math.Sqrt(sum / System.Math.Max(1, samples.Length));
         }
 
         private void OnTranscriptReceived(object? sender, string text)
