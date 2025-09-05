@@ -8,6 +8,11 @@ namespace Cloak.Services.LLM
         {
             return Task.FromResult($"[mock LLM] Based on: {context}");
         }
+
+        public Task<string> SummarizeAsync(string transcript)
+        {
+            return Task.FromResult("[mock summary] Highlights, action items, and risks.");
+        }
     }
 }
 

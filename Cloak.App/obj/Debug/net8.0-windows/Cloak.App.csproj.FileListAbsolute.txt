@@ -131,3 +131,4 @@ C:\Users\skala\Projects\cloak\Cloak.App\obj\Debug\net8.0-windows\refint\Cloak.Ap
 C:\Users\skala\Projects\cloak\Cloak.App\obj\Debug\net8.0-windows\Cloak.App.pdb
 C:\Users\skala\Projects\cloak\Cloak.App\obj\Debug\net8.0-windows\Cloak.App.genruntimeconfig.cache
 C:\Users\skala\Projects\cloak\Cloak.App\obj\Debug\net8.0-windows\ref\Cloak.App.dll
+C:\Users\skala\Projects\cloak\Cloak.App\obj\Debug\net8.0-windows\Cloak.App.sourcelink.json
