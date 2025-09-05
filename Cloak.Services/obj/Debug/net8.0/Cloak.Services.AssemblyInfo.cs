@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("Cloak.Services")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+6d6089829f4d44973e348857fa1a664e557b4a08")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+311d0cf7babb5fe751fee260cfbaba102047312c")]
 [assembly: System.Reflection.AssemblyProductAttribute("Cloak.Services")]
 [assembly: System.Reflection.AssemblyTitleAttribute("Cloak.Services")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]
