@@ -18,10 +18,7 @@ namespace Cloak.App
         private string _loopQuestionCache = string.Empty;
         private System.DateTime _lastLoopSuggestAt = System.DateTime.MinValue;
         private readonly System.TimeSpan _loopSuggestMinInterval = System.TimeSpan.FromSeconds(6);
-        private float _lastMicRms = 0f;
-        private float _lastLoopRms = 0f;
-        private const float RmsThreshold = 0.01f; // gate low noise
-        private const float DominanceRatio = 1.2f; // active speaker detection
+        // Echo control disabled (was active-speaker gating)
 
         public MainWindow()
         {
@@ -30,9 +27,14 @@ namespace Cloak.App
             _audioCaptureService = new WasapiAudioCaptureService();
             var azureKey = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_KEY");
             var azureRegion = System.Environment.GetEnvironmentVariable("AZURE_SPEECH_REGION");
+            var biasTerms = new[]
+            {
+                "Sigma", "SQL", "Power BI", "Freshdesk", "Zendesk", "RingCentral", "Jedana", "CSAT",
+                "API integrations", "benchmark", "Support Operations Hub", "Python", "Snowflake", "Redshift"
+            };
             if (!string.IsNullOrWhiteSpace(azureKey) && !string.IsNullOrWhiteSpace(azureRegion))
             {
-                _transcriptionService = new AzureSpeechTranscriptionService(azureKey!, azureRegion!);
+                _transcriptionService = new AzureSpeechTranscriptionService(azureKey!, azureRegion!, biasTerms);
             }
             else
             {
@@ -104,29 +106,16 @@ namespace Cloak.App
                 {
                     await cap.StartAsync(sample =>
                     {
-                        _transcriptionService.PushAudio(sample); // show in UI
-                        // Active speaker gating: prefer mic when dominant
-                        _lastMicRms = ComputeRms(sample.Span);
-                        if (_lastMicRms > RmsThreshold && _lastMicRms >= _lastLoopRms * DominanceRatio)
-                        {
-                            if (!object.ReferenceEquals(_micTranscriptionService, _transcriptionService) && _micTranscriptionService != null)
-                                _micTranscriptionService.PushAudio(sample); // suggestions
-                            else
-                                _transcriptionService.PushAudio(sample); // single recognizer path
-                        }
+                        _transcriptionService.PushAudio(sample);
+                        if (!object.ReferenceEquals(_micTranscriptionService, _transcriptionService) && _micTranscriptionService != null)
+                            _micTranscriptionService.PushAudio(sample);
                     });
                 }
                 else // loopback
                 {
                     await cap.StartAsync(sample =>
                     {
-                        _transcriptionService.PushAudio(sample); // UI only
-                        _lastLoopRms = ComputeRms(sample.Span);
-                        if (_lastLoopRms > RmsThreshold && _lastLoopRms >= _lastMicRms * DominanceRatio)
-                        {
-                            // feed recognizer when interviewer dominates
-                            _transcriptionService.PushAudio(sample);
-                        }
+                        _transcriptionService.PushAudio(sample);
                     });
                 }
             }
@@ -173,16 +162,7 @@ namespace Cloak.App
             }
         }
 
-        private static float ComputeRms(ReadOnlySpan<float> samples)
-        {
-            double sum = 0;
-            for (int i = 0; i < samples.Length; i++)
-            {
-                var v = samples[i];
-                sum += v * v;
-            }
-            return (float)System.Math.Sqrt(sum / System.Math.Max(1, samples.Length));
-        }
+        // Previously had RMS-based gating here; removed to improve recognition quality
 
         private void OnTranscriptReceived(object? sender, string text)
         {

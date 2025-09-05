@@ -2,6 +2,8 @@ using System;
 using System.Threading.Tasks;
 using Microsoft.CognitiveServices.Speech;
 using Microsoft.CognitiveServices.Speech.Audio;
+using Microsoft.CognitiveServices.Speech.Translation;
+using Microsoft.CognitiveServices.Speech.Grammar;
 
 namespace Cloak.Services.Transcription
 {
@@ -14,13 +16,22 @@ namespace Cloak.Services.Transcription
         private readonly AudioConfig _audioConfig;
         private readonly SpeechRecognizer _recognizer;
 
-        public AzureSpeechTranscriptionService(string subscriptionKey, string region)
+        public AzureSpeechTranscriptionService(string subscriptionKey, string region, System.Collections.Generic.IEnumerable<string>? biasPhrases = null)
         {
             _config = SpeechConfig.FromSubscription(subscriptionKey, region);
             _config.SpeechRecognitionLanguage = "en-US";
             _audioStream = AudioInputStream.CreatePushStream(AudioStreamFormat.GetWaveFormatPCM(16000, 16, 1));
             _audioConfig = AudioConfig.FromStreamInput(_audioStream);
             _recognizer = new SpeechRecognizer(_config, _audioConfig);
+
+            if (biasPhrases != null)
+            {
+                var phraseList = PhraseListGrammar.FromRecognizer(_recognizer);
+                foreach (var p in biasPhrases)
+                {
+                    if (!string.IsNullOrWhiteSpace(p)) phraseList.AddPhrase(p);
+                }
+            }
 
             // Emit final results only to reduce UI spam
             _recognizer.Recognizing += (_, _) => { };
